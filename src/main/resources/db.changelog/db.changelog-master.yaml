@@ -1,0 +1,153 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Nikolay
+      changes:
+        - createTable:
+            tableName: site
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: last_error
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: url
+                  type: TEXT
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  name: status_time
+                  type: TIMESTAMP
+  - changeSet:
+      id: 2
+      author: Nikolay
+      changes:
+        - createTable:
+            tableName: page
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: site_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: path
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: MEDIUMTEXT
+                  constraints:
+                    nullable: true
+        - addForeignKeyConstraint:
+            baseTableName: page
+            baseColumnNames: site_id
+            referencedTableName: site
+            referencedColumnNames: id
+            constraintName: fk_page_site
+        - createIndex:
+            tableName: page
+            indexName: idx_page_path
+            unique: true
+            columns:
+              - column:
+                  name: path
+  - changeSet:
+      id: 3
+      author: Nikolay
+      changes:
+        - createTable:
+            tableName: lemma
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: site_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemma
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: frequency
+                  type: INT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: lemma
+            baseColumnNames: site_id
+            referencedTableName: site
+            referencedColumnNames: id
+            constraintName: fk_lemma_site
+  - changeSet:
+      id: 4
+      author: Nikolay
+      changes:
+        - createTable:
+            tableName: index
+            columns:
+              - column:
+                  name: id
+                  type: INT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: page_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lemma_id
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rank
+                  type: FLOAT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: index
+            baseColumnNames: page_id
+            referencedTableName: page
+            referencedColumnNames: id
+            constraintName: fk_index_page
+        - addForeignKeyConstraint:
+            baseTableName: index
+            baseColumnNames: lemma_id
+            referencedTableName: lemma
+            referencedColumnNames: id
+            constraintName: fk_index_lemma
