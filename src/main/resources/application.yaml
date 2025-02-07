@@ -2,7 +2,6 @@
 
 indexing-settings:
   sites:
-
     - url: https://sendel.ru/
       name: сендел.ру
 #    - url: https://www.lenta.ru
@@ -11,6 +10,7 @@ indexing-settings:
 #      name: Skillbox
 #    - url: https://www.playback.ru
 #      name: PlayBack.Ru
+
 server:
   port: 8080
 

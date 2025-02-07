@@ -1,7 +1,5 @@
 package searchengine.controllers;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,21 +43,22 @@ public class ApiController {
 //                "pages": 5764,
 //                    "lemmas": 321115
 //            }
-try {
-    throw new RuntimeException("unable to connect DB");
-}catch (Exception e){
-  //  return ResponseEntity.ok(IndexingResult.failResult("Индексация еще не завершена"));
-}
+        try {
+            throw new RuntimeException("unable to connect DB");
+        } catch (Exception e) {
+            //  return ResponseEntity.ok(IndexingResult.failResult("Индексация еще не завершена"));
+        }
         return ResponseEntity.ok(statisticsService.getStatistics());
     }
+
     @GetMapping("/startIndexing")
     public ResponseEntity<IndexingResult> startIndex() {
-        if (true) {
+        if (!IndexService.isRunning.getAndSet(true)) {
             // todo
-            indexService.startIndex(sitesList.getSiteConfigs());
-            return ResponseEntity.ok(IndexingResult.failResult("Индексация уже запущена"));
+            indexService.startIndex(sitesList.getSites());
+            return ResponseEntity.ok(IndexingResult.successfulResult());
         }
-        return ResponseEntity.ok(IndexingResult.successfulResult());
+        return ResponseEntity.ok(IndexingResult.failResult("Индексация уже запущена"));
 
 
     }
@@ -81,10 +80,11 @@ try {
                                                  @RequestParam String site,
                                                  @RequestParam(defaultValue = "0") Integer offset,
                                                  @RequestParam(defaultValue = "20") Integer limit) {
-        if (query == null||query.trim().isEmpty()){
+        if (query == null || query.trim().isEmpty()) {
             return ResponseEntity.ok(IndexingResult.failResult("Указан пустой поисковый запрос"));
 
-        }if (true){
+        }
+        if (true) {
             //todo
             return ResponseEntity.ok(IndexingResult.failResult("Индексация еще не завершена"));
 
@@ -106,8 +106,6 @@ try {
         }
         return ResponseEntity.ok(IndexingResult.successfulResult());
     }
-
-
 
 
 }

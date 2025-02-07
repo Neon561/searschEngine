@@ -3,6 +3,7 @@ package searchengine.services;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.entity.Lemma;
+import searchengine.model.entity.Site;
 import searchengine.model.repository.LemmaRepository;
 import java.util.*;
 
@@ -15,16 +16,16 @@ public class LemmaRepositoryService {
     }
 
     @Transactional
-    public void saveLemmas(Map<String, Map<Long, Integer>> lemmaData) {
+    public void saveLemmas(Map<String, Map<Site, Integer>> lemmaData) {
         List<Lemma> batch = new ArrayList<>();
 
-        for (Map.Entry<String, Map<Long, Integer>> entry : lemmaData.entrySet()) {
+        for (Map.Entry<String, Map<Site, Integer>> entry : lemmaData.entrySet()) {
             String lemma = entry.getKey();
-            for (Map.Entry<Long, Integer> siteEntry : entry.getValue().entrySet()) {
-                Long siteId = siteEntry.getKey();
+            for (Map.Entry<Site, Integer> siteEntry : entry.getValue().entrySet()) {
+                Site site = siteEntry.getKey();
                 int frequency = siteEntry.getValue();
 
-                Lemma lemmaEntity = lemmaRepository.findByLemmaAndSite(lemma, siteId)
+                Lemma lemmaEntity = lemmaRepository.findByLemmaAndSite(lemma, site)
                         .orElseGet(() -> {
                             Lemma newLemma = new Lemma();
                             newLemma.setLemma(lemma);

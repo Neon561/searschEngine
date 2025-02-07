@@ -10,8 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 @Component
-
 @ConfigurationProperties(prefix = "indexing-settings")
 public class SitesList {
-    private List<SiteConfig> siteConfigs;
+    private List<SiteConfig> sites;
 }

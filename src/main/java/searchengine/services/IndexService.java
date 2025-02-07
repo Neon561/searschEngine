@@ -4,23 +4,27 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteConfig;
+import searchengine.config.SitesList;
 import searchengine.model.SiteStatus;
 import searchengine.model.entity.Site;
 import searchengine.model.repository.PageRepository;
 import searchengine.model.repository.SiteRepository;
-
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+//почитать про синг тон
 @Service
 @Data
 @RequiredArgsConstructor
 public class IndexService {
 
-    private static boolean isRunning;
+    public static AtomicBoolean isRunning = new AtomicBoolean(false);
 
+    private final SitesList sitesList;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final ForkJoinPool forkJoinPool;
@@ -29,13 +33,43 @@ public class IndexService {
 
 
     public void startIndex(List<SiteConfig> siteConfigList) {
-        isRunning = true;
-        deleteSites(siteConfigList);
-        saveSiteFromConfig(siteConfigList);
+        // List<Site> res = new ArrayList<>();
 
-                siteConfigList.stream()
-                .map((SiteConfig siteConfig) -> new IndexTask(siteConfig.getUrl(), lemmaService,pageService,getSiteIdFromUrl(siteConfig.getUrl())))
-                .forEach(forkJoinPool::execute);
+        // это вроде должны получить из контроллера??
+//        for (SiteConfig siteConfig : sitesList.getSites()) {
+//            res.add(siteRepository.findByUrl(siteConfig.getUrl())
+//                    .orElseGet(() -> {
+//                        Site newSite = new Site();
+//                        newSite.setUrl(siteConfig.getUrl());
+//                        newSite.setSiteName(siteConfig.getName());
+//                        newSite.setSiteStatus(SiteStatus.INDEXING);
+//                        System.out.println("Добавление сайта в базу данных: " +  siteConfig.getUrl());
+//                        return siteRepository.save(newSite);
+//                    }));
+//
+//        }
+        isRunning.set(true);
+        try {
+            try {
+                deleteSites(siteConfigList);
+            } catch (Exception ignored) {
+            }
+
+            List<Site> sites = saveSiteFromConfig(siteConfigList);
+
+            sites.stream()
+                    .map(site -> new IndexTask(
+                            site.getUrl(),
+                            lemmaService,
+                            pageService,
+                            site
+                    ))
+                    .forEach(forkJoinPool::execute);
+        } catch (Exception e) {
+
+        } finally {
+            isRunning.set(false);
+        }
     }
 
 
@@ -60,19 +94,20 @@ public class IndexService {
                 .orElseThrow(() -> new RuntimeException("Сайт с ID " + siteId + " не найден"));
 
     }
+
     //or string name?
-    private Long getSiteIdFromUrl(String url){
+    private Long getSiteIdFromUrl(String url) {
 
         Optional<Site> site = siteRepository.findByUrl(url);
 
         return site.orElseThrow().getId();
     }
 
-    private void saveSiteFromConfig(List<SiteConfig> siteConfigs) {
+    private List<Site> saveSiteFromConfig(List<SiteConfig> siteConfigs) {
 
-
+        List<Site> res = new ArrayList<>();
         for (SiteConfig siteConfig : siteConfigs) {
-            System.out.println("Добавление сайта {} со статусом INDEXING" + siteConfig.getUrl());
+            System.out.println("Добавление сайта со статусом INDEXING " + siteConfig.getUrl());
             Site site = new Site();
             site.setUrl(siteConfig.getUrl());
             site.setSiteName(siteConfig.getName());
@@ -80,7 +115,8 @@ public class IndexService {
             site.setStatusTime(Instant.now()); // Устанавливаем время начала индексации
             site.setLastError(""); // Если нужно, установите пустое сообщение об ошибке
 
-            siteRepository.save(site);
+            res.add(siteRepository.save(site));
         }
+        return res;
     }
 }

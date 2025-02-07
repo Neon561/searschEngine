@@ -4,6 +4,7 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.springframework.stereotype.Service;
+import searchengine.model.entity.Site;
 import searchengine.model.repository.IndexRepository;
 import searchengine.model.repository.LemmaRepository;
 
@@ -18,7 +19,8 @@ public class LemmaService {
     private final LuceneMorphology russianMorphology;
     private final LuceneMorphology englishMorphology;
     private final LemmaRepository lemmaRepository;
-    private final ConcurrentHashMap<String, Map<Long, Integer>> lemmaFrequencyMap;
+
+    private final ConcurrentHashMap<String, Map<Site, Integer>> lemmaFrequencyMap;
     private static final int BATCH_SIZE = 2000;
 
     private static final Set<String> RUSSIAN_STOP_WORDS = Set.of("и", "в", "на", "с", "по", "к", "у", "о", "за", "не", "об", "обо");
@@ -30,12 +32,12 @@ public class LemmaService {
         this.russianMorphology = new RussianLuceneMorphology();
         this.englishMorphology = new EnglishLuceneMorphology();
         this.lemmaRepository = lemmaRepository;
-        lemmaFrequencyMap = new ConcurrentHashMap<String, Map<Long, Integer>>();
+        lemmaFrequencyMap = new ConcurrentHashMap<String, Map<Site, Integer>>();
 
 
     }
 //todo добавить уникальный индекс на лемму + site id чтобы фильтровать дубликаты на уровне базы.
-    public void searchLemma(String text,Long siteId) {
+    public void searchLemma(String text, Site site) {
         String[] words = text.replaceAll("[^a-zA-Zа-яА-Я0-9\\s]", "").toLowerCase().split("\\s+");
 
         for (String word : words) {
@@ -45,7 +47,7 @@ public class LemmaService {
 
                 lemmaFrequencyMap
                         .computeIfAbsent(lemma, k -> new ConcurrentHashMap<>()) // Создаём вложенную Map, если леммы ещё нет
-                        .merge(siteId, 1, Integer::sum); // Увеличиваем частоту леммы для данного siteId
+                        .merge(site, 1, Integer::sum); // Увеличиваем частоту леммы для данного siteId
 
 
             }
@@ -68,7 +70,7 @@ public class LemmaService {
             }
         }
     }
-    private void saveLemmas(Map<String, Map<Long, Integer>> lemmaData){
+    private void saveLemmas(Map<String, Map<Site, Integer>> lemmaData){
 
 
         //todo

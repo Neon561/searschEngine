@@ -3,7 +3,7 @@ package searchengine.services;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import searchengine.config.SiteConfig;
+import searchengine.model.entity.Site;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -19,15 +19,17 @@ public class IndexTask extends RecursiveAction {
     private final String url;
     private final LemmaService lemmaService;
     private final PageService pageService;
-    private final Long siteId;
+    // private final Long siteId;
+    private final Site site;
     private static final String EXCLUDE_PATTERN = ".*(\\.(png|jpg|jpeg|gif|bmp|zip|sql|pdf|doc|docx|xls|xlsx|ppt|pptx|exe|tar|gz|rar|7z)|#.*)$";
 
 
-    public IndexTask(String url, LemmaService lemmaService,PageService pageService,Long siteId) {
+    public IndexTask(String url, LemmaService lemmaService, PageService pageService, Site site) {
         this.url = url;
         this.lemmaService = lemmaService;
         this.pageService = pageService;
-        this.siteId = siteId;
+        //this.siteId = siteId;
+        this.site = site;
     }
 //PAGE
 //id INT NOT NULL AUTO_INCREMENT;
@@ -57,19 +59,19 @@ public class IndexTask extends RecursiveAction {
             Connection.Response response = connection.execute();
 
             int statusCode = response.statusCode();
-            System.out.println(("URL: {}, статус код: {}" + url + " " + statusCode));
+            System.out.println(("статус код: " + statusCode + " " + url));
             if (statusCode == 200) {
                 Document doc = connection.get();
                 String text = doc.body().text();
-                pageService.savePage(url,text,statusCode);
-                lemmaService.searchLemma(text,siteId);
+                pageService.savePage(url, text, statusCode);
+                lemmaService.searchLemma(text, site); // Передаем Site
 
                 List<IndexTask> subTasks = doc.select("a[href]").stream()
                         .map(link -> link.attr("abs:href"))
-                        .filter(link -> isSameDomain(url,link))
+                        .filter(link -> isSameDomain(url, link))
                         .filter(link -> !link.matches(EXCLUDE_PATTERN))
                         .distinct()
-                        .map(link -> new IndexTask(link,lemmaService,pageService,siteId))
+                        .map(link -> new IndexTask(link, lemmaService, pageService, site))
                         .toList();
 
                 System.out.println("Запустили таску для " + url);
@@ -101,7 +103,7 @@ public class IndexTask extends RecursiveAction {
 
             return pageHost.equals(siteHost) || pageHost.endsWith("." + siteHost);
         } catch (URISyntaxException e) {
-            System.out.println("Ошибка разбора URL: " +  e.getMessage());
+            System.out.println("Ошибка разбора URL: " + e.getMessage());
             return false;
         }
     }
