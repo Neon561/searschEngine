@@ -16,14 +16,15 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-//почитать про синг тон
+import static searchengine.services.NormalizerUrl.normalizeUrl;
+
+//почитать про сингл тон
 @Service
 @Data
 @RequiredArgsConstructor
 public class IndexService {
 
     public static AtomicBoolean isRunning = new AtomicBoolean(false);
-
     private final SitesList sitesList;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
@@ -33,52 +34,32 @@ public class IndexService {
 
 
     public void startIndex(List<SiteConfig> siteConfigList) {
-        // List<Site> res = new ArrayList<>();
-
-        // это вроде должны получить из контроллера??
-//        for (SiteConfig siteConfig : sitesList.getSites()) {
-//            res.add(siteRepository.findByUrl(siteConfig.getUrl())
-//                    .orElseGet(() -> {
-//                        Site newSite = new Site();
-//                        newSite.setUrl(siteConfig.getUrl());
-//                        newSite.setSiteName(siteConfig.getName());
-//                        newSite.setSiteStatus(SiteStatus.INDEXING);
-//                        System.out.println("Добавление сайта в базу данных: " +  siteConfig.getUrl());
-//                        return siteRepository.save(newSite);
-//                    }));
-//
-//        }
         isRunning.set(true);
         try {
-            try {
-                deleteSites(siteConfigList);
-            } catch (Exception ignored) {
-            }
 
             List<Site> sites = saveSiteFromConfig(siteConfigList);
 
-            sites.stream()
+            // Создаём список задач
+            List<IndexTask> tasks = sites.stream()
                     .map(site -> new IndexTask(
                             site.getUrl(),
                             lemmaService,
                             pageService,
                             site
                     ))
-                    .forEach(forkJoinPool::execute);
-        } catch (Exception e) {
+                    .toList();
 
+            // Запускаем все задачи и ждём их завершения
+            tasks.forEach(forkJoinPool::invoke);
+            System.out.println("Индексация завершена");
+
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             isRunning.set(false);
         }
     }
 
-
-    public void deleteSites(List<SiteConfig> siteConfigList) {
-        for (SiteConfig siteConfig : siteConfigList) {
-            System.out.println("Удалена информация по сайтам : " + siteConfig.getUrl());
-            siteRepository.deleteByUrl(siteConfig.getUrl());
-        }
-    }
 
     public void updateStatus(List<SiteConfig> siteConfigList) {
         for (SiteConfig siteConfig : siteConfigList) {
@@ -103,6 +84,36 @@ public class IndexService {
         return site.orElseThrow().getId();
     }
 
+    public void reindexPage(String url) {
+        String normalizeUrl = normalizeUrl(url);
+
+        Optional<Site> site = siteRepository.findAll().stream()
+                .filter(s -> normalizeUrl.startsWith(s.getUrl()))
+                        .findFirst();
+
+        if (site.isEmpty()) {
+            throw new RuntimeException("Сайт для URL " + url + " не найден в базе данных.");
+        }
+        // Определяем, к какому сайту принадлежит страница
+
+
+        // Удаляем старую страницу перед индексацией
+       //pageService.deletePageByPath(normalizeUrl);
+        pageService.deletePageAndUpdateLemmas(normalizeUrl);
+
+        // Создаём задачу для индексации этой страницы
+        IndexTask task = new IndexTask(normalizeUrl, lemmaService, pageService, site.get());
+
+        // Запускаем индексацию в ForkJoinPool
+        forkJoinPool.invoke(task);
+    }
+
+    //todo норм, что он паблик?
+    public boolean isUrlInConfig(String url) {
+        return sitesList.getSites().stream()
+                .anyMatch(siteConfig -> url.startsWith(siteConfig.getUrl()));
+    }
+
     private List<Site> saveSiteFromConfig(List<SiteConfig> siteConfigs) {
 
         List<Site> res = new ArrayList<>();
@@ -119,4 +130,5 @@ public class IndexService {
         }
         return res;
     }
+
 }

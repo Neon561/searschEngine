@@ -8,6 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface PageRepository extends JpaRepository<Page, Long> {
-
+    Optional<Page> findByPath(String path);
+    int countBySiteId(Long siteId);
 
 }

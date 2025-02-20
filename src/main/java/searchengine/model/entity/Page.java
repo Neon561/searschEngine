@@ -3,6 +3,8 @@ package searchengine.model.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.List;
+
 @Entity
 @Table(name = "page")
 @Data
@@ -25,5 +27,8 @@ public class Page {
 
     @Column(name = "content")
     private String content;
+    @OneToMany(mappedBy = "page", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Index> indices;
+
 
 }

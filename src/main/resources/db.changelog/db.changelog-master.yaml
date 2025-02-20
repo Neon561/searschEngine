@@ -111,6 +111,15 @@ databaseChangeLog:
             referencedTableName: site
             referencedColumnNames: id
             constraintName: fk_lemma_site
+        - createIndex:
+            tableName: lemma
+            indexName: idx_lemma_site_unique
+            unique: true
+            columns:
+              - column:
+                  name: lemma
+              - column:
+                  name: site_id
   - changeSet:
       id: 4
       author: Nikolay
@@ -151,3 +160,28 @@ databaseChangeLog:
             referencedTableName: lemma
             referencedColumnNames: id
             constraintName: fk_index_lemma
+  - changeSet:
+      id: 5
+      author: Nikolay
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: index
+            constraintName: fk_index_page
+        - addForeignKeyConstraint:
+            baseTableName: index
+            baseColumnNames: page_id
+            referencedTableName: page
+            referencedColumnNames: id
+            constraintName: fk_index_page
+            onDelete: CASCADE
+
+        - dropForeignKeyConstraint:
+            baseTableName: index
+            constraintName: fk_index_lemma
+        - addForeignKeyConstraint:
+            baseTableName: index
+            baseColumnNames: lemma_id
+            referencedTableName: lemma
+            referencedColumnNames: id
+            constraintName: fk_index_lemma
+            onDelete: CASCADE

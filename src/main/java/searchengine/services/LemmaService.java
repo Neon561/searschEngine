@@ -4,14 +4,12 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.springframework.stereotype.Service;
-import searchengine.model.entity.Site;
+import searchengine.model.entity.Page;
 import searchengine.model.repository.IndexRepository;
 import searchengine.model.repository.LemmaRepository;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 @Service
 
@@ -19,44 +17,50 @@ public class LemmaService {
     private final LuceneMorphology russianMorphology;
     private final LuceneMorphology englishMorphology;
     private final LemmaRepository lemmaRepository;
+    private final LemmaRepositoryService lemmaRepositoryService;
 
-    private final ConcurrentHashMap<String, Map<Site, Integer>> lemmaFrequencyMap;
-    private static final int BATCH_SIZE = 2000;
+    private static final int BATCH_SIZE = 100;
 
-    private static final Set<String> RUSSIAN_STOP_WORDS = Set.of("и", "в", "на", "с", "по", "к", "у", "о", "за", "не", "об", "обо");
-    private static final Set<String> ENGLISH_STOP_WORDS = Set.of("and", "the", "in", "on", "with", "to", "of", "a", "an", "for");
+    private static final Set<String> RUSSIAN_EXCLUDE_WORDS = Set.of("и","но", "в", "на", "с", "по", "к", "у", "о", "за", "не", "об", "обо");
+    private static final Set<String> ENGLISH_EXCLUDE_WORDS = Set.of("and", "the", "in", "on", "with", "to", "of", "a", "an", "for");
 
+    public static String[] extractWords(String text){
 
+        return text.replaceAll("[^a-zA-Zа-яА-Я0-9\\s]", "").toLowerCase().split("\\s+");
+    }
 
-    public LemmaService(LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
+    public LemmaService(LemmaRepository lemmaRepository,
+                        IndexRepository indexRepository,
+                        LemmaRepositoryService lemmaRepositoryService) throws IOException {
         this.russianMorphology = new RussianLuceneMorphology();
         this.englishMorphology = new EnglishLuceneMorphology();
         this.lemmaRepository = lemmaRepository;
-        lemmaFrequencyMap = new ConcurrentHashMap<String, Map<Site, Integer>>();
-
-
+        this.lemmaRepositoryService = lemmaRepositoryService;
     }
-//todo добавить уникальный индекс на лемму + site id чтобы фильтровать дубликаты на уровне базы.
-    public void searchLemma(String text, Site site) {
-        String[] words = text.replaceAll("[^a-zA-Zа-яА-Я0-9\\s]", "").toLowerCase().split("\\s+");
 
-        for (String word : words) {
-            if (!RUSSIAN_STOP_WORDS.contains(word) || ENGLISH_STOP_WORDS.contains(word)) {
-                String lemma = getLemma(word);
+    //
+    public void searchAndSaveLemma(String text, Page page) {
+        List<String> lemmas = searchLemma(text);
+        Map<String, Integer> lemmaCountOnPage = new HashMap<>();
 
-
-                lemmaFrequencyMap
-                        .computeIfAbsent(lemma, k -> new ConcurrentHashMap<>()) // Создаём вложенную Map, если леммы ещё нет
-                        .merge(site, 1, Integer::sum); // Увеличиваем частоту леммы для данного siteId
-
-
-            }
-            if (lemmaFrequencyMap.size()>=BATCH_SIZE){
-                saveLemmas(lemmaFrequencyMap);
-            }
-
+        for (String lemma : lemmas) {
+            lemmaCountOnPage.merge(lemma, 1, Integer::sum);
         }
 
+        lemmaRepositoryService.saveLemmasAndIndexes(lemmaCountOnPage, page);
+    }
+
+    public List<String> searchLemma(String text) {
+
+        String[] words = extractWords(text);
+        List<String> res = new ArrayList<>();
+        for (String word : words) {
+            if (!RUSSIAN_EXCLUDE_WORDS.contains(word) && !ENGLISH_EXCLUDE_WORDS.contains(word)) {
+                String lemma = getLemma(word);
+                res.add(lemma);
+            }
+        }
+       return res;
     }
 
     private String getLemma(String word) {
@@ -69,11 +73,9 @@ public class LemmaService {
                 return word.toLowerCase(); // Если не удалось, возвращаем слово как есть
             }
         }
+
     }
-    private void saveLemmas(Map<String, Map<Site, Integer>> lemmaData){
 
 
-        //todo
-    }
 
 }

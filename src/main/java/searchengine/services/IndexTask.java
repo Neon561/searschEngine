@@ -3,6 +3,7 @@ package searchengine.services;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import searchengine.model.entity.Page;
 import searchengine.model.entity.Site;
 
 import java.net.URI;
@@ -19,7 +20,7 @@ public class IndexTask extends RecursiveAction {
     private final String url;
     private final LemmaService lemmaService;
     private final PageService pageService;
-    // private final Long siteId;
+
     private final Site site;
     private static final String EXCLUDE_PATTERN = ".*(\\.(png|jpg|jpeg|gif|bmp|zip|sql|pdf|doc|docx|xls|xlsx|ppt|pptx|exe|tar|gz|rar|7z)|#.*)$";
 
@@ -28,15 +29,8 @@ public class IndexTask extends RecursiveAction {
         this.url = url;
         this.lemmaService = lemmaService;
         this.pageService = pageService;
-        //this.siteId = siteId;
         this.site = site;
     }
-//PAGE
-//id INT NOT NULL AUTO_INCREMENT;
-//    site_id INT NOT NULL — ID веб-сайта из таблицы site;// todo ++
-//    path TEXT NOT NULL — адрес страницы от корня сайта (должен начинаться со слэша, например: /news/372189/); //todo ++
-//    code INT NOT NULL — код HTTP-ответа, полученный при запросе страницы (например, 200, 404, 500 или другие);todo //++
-//    content MEDIUMTEXT NOT NULL — контент страницы (HTML-код). todo ++
 
 //    lemma
 //    id INT NOT NULL AUTO_INCREMENT;
@@ -49,8 +43,11 @@ public class IndexTask extends RecursiveAction {
     protected void compute() {
 
         try {
+            if (pageService.pageExist(url)) {
+                return;
+            }//todo вынести задержку в константу и таймайут и слееп
             Thread.sleep(500 + new Random().nextInt(3500)); // 500–4000 мс
-            // Подключение к странице
+
             Connection connection = Jsoup.connect(url)
                     .userAgent(userAgent)
                     .referrer(referrer)
@@ -59,18 +56,22 @@ public class IndexTask extends RecursiveAction {
             Connection.Response response = connection.execute();
 
             int statusCode = response.statusCode();
-            System.out.println(("статус код: " + statusCode + " " + url));
+
             if (statusCode == 200) {
                 Document doc = connection.get();
-                String text = doc.body().text();
-                pageService.savePage(url, text, statusCode);
-                lemmaService.searchLemma(text, site); // Передаем Site
+                String pageHtmlText = doc.html();
+
+                Page savedPage = pageService.savePage(url, pageHtmlText, statusCode, site);
+                lemmaService.searchAndSaveLemma(doc.body().text(), savedPage);
 
                 List<IndexTask> subTasks = doc.select("a[href]").stream()
                         .map(link -> link.attr("abs:href"))
-                        .filter(link -> isSameDomain(url, link))
+                        //.filter(link -> isSameDomain(url, link))// вместо след.щей строчки можно сделать проверку по хосту
+                        .filter(link -> link.startsWith(url))
                         .filter(link -> !link.matches(EXCLUDE_PATTERN))
                         .distinct()
+
+                        .map(NormalizerUrl::normalizeUrl)
                         .map(link -> new IndexTask(link, lemmaService, pageService, site))
                         .toList();
 
@@ -78,13 +79,14 @@ public class IndexTask extends RecursiveAction {
 
                 invokeAll(subTasks);
 
-            } else {
 
+            } else {
+                System.out.println("Страница не проиндексирована " + url + "статус код" + statusCode);
             }
 
-            //todo
-
         } catch (Exception e) {
+            System.err.println("Ошибка при обработке страницы " + url + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -106,5 +108,9 @@ public class IndexTask extends RecursiveAction {
             System.out.println("Ошибка разбора URL: " + e.getMessage());
             return false;
         }
+
     }
+//     String normalizeUrl(String url) {
+//        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+//    }
 }
