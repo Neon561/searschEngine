@@ -23,7 +23,8 @@ public class IndexTask extends RecursiveAction {
 
     private final Site site;
     private static final String EXCLUDE_PATTERN = ".*(\\.(png|jpg|jpeg|gif|bmp|zip|sql|pdf|doc|docx|xls|xlsx|ppt|pptx|exe|tar|gz|rar|7z)|#.*)$";
-
+    private static final int MIN_TIME_DELAY = 500;
+    private static final int MAX_TIME_DELAY = 4000;
 
     public IndexTask(String url, LemmaService lemmaService, PageService pageService, Site site) {
         this.url = url;
@@ -32,21 +33,16 @@ public class IndexTask extends RecursiveAction {
         this.site = site;
     }
 
-//    lemma
-//    id INT NOT NULL AUTO_INCREMENT;
-//    site_id INT NOT NULL — ID веб-сайта из таблицы site;
-//    lemma VARCHAR(255) NOT NULL — нормальная форма слова (лемма);
-//    frequency INT NOT NULL — количество страниц, на которых слово встречается хотя бы один раз. Максимальное значение не может превышать общее количество слов на сайте.
 
 
     @Override
     protected void compute() {
 
         try {
-            if (pageService.pageExist(url)) {
+            if (pageService.pageExist(site.getId(), extractPathFromUrl(url))) {
                 return;
-            }//todo вынести задержку в константу и таймайут и слееп
-            Thread.sleep(500 + new Random().nextInt(3500)); // 500–4000 мс
+            }
+            Thread.sleep(MIN_TIME_DELAY + new Random().nextInt(MAX_TIME_DELAY));
 
             Connection connection = Jsoup.connect(url)
                     .userAgent(userAgent)
@@ -61,12 +57,11 @@ public class IndexTask extends RecursiveAction {
                 Document doc = connection.get();
                 String pageHtmlText = doc.html();
 
-                Page savedPage = pageService.savePage(url, pageHtmlText, statusCode, site);
+                Page savedPage = pageService.savePage(extractPathFromUrl(url), pageHtmlText, statusCode, site);
                 lemmaService.searchAndSaveLemma(doc.body().text(), savedPage);
 
                 List<IndexTask> subTasks = doc.select("a[href]").stream()
                         .map(link -> link.attr("abs:href"))
-                        //.filter(link -> isSameDomain(url, link))// вместо след.щей строчки можно сделать проверку по хосту
                         .filter(link -> link.startsWith(url))
                         .filter(link -> !link.matches(EXCLUDE_PATTERN))
                         .distinct()
@@ -75,8 +70,7 @@ public class IndexTask extends RecursiveAction {
                         .map(link -> new IndexTask(link, lemmaService, pageService, site))
                         .toList();
 
-                System.out.println("Запустили таску для " + url);
-
+                System.out.println("Обработано: " + url + " найдено страниц: " + subTasks.size());
                 invokeAll(subTasks);
 
 
@@ -90,27 +84,13 @@ public class IndexTask extends RecursiveAction {
         }
     }
 
-
-    private boolean isSameDomain(String siteUrl, String pageUrl) {
+    private String extractPathFromUrl(String url) {
         try {
-            URI siteUri = new URI(siteUrl);
-            URI pageUri = new URI(pageUrl);
-
-            String siteHost = siteUri.getHost();
-            String pageHost = pageUri.getHost();
-
-            if (siteHost == null || pageHost == null) {
-                return false;
-            }
-
-            return pageHost.equals(siteHost) || pageHost.endsWith("." + siteHost);
+            URI uri = new URI(url);
+            return uri.getPath();
         } catch (URISyntaxException e) {
-            System.out.println("Ошибка разбора URL: " + e.getMessage());
-            return false;
+            throw new RuntimeException("Некорректный URL: " + url, e);
         }
-
     }
-//     String normalizeUrl(String url) {
-//        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-//    }
+
 }

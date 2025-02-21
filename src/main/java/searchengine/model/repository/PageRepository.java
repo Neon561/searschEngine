@@ -11,4 +11,5 @@ public interface PageRepository extends JpaRepository<Page, Long> {
     Optional<Page> findByPath(String path);
     int countBySiteId(Long siteId);
 
+    boolean existsBySiteIdAndPath(Long siteId, String path);
 }

@@ -86,11 +86,11 @@ public class ApiController {
             if (site == null || site.trim().isEmpty()) {
                 // Если сайт не указан, ищем по всем сайтам
                 results = searchService.searchAllSites(query, offset, limit);
-                totalCount = searchService.getTotalCount(query);
+                totalCount = searchService.getTotalCountPageWithLemma(query);
             } else {
                 // Ищем по конкретному сайту
                 results = searchService.search(query, site, offset, limit);
-                totalCount = searchService.getTotalCount(query, site);
+                totalCount = searchService.getTotalCountPageWithLemma(query, site);
             }
 
             return ResponseEntity.ok(SearchResponse.success(totalCount, results));

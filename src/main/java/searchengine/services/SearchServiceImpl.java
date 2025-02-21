@@ -1,6 +1,8 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.dto.SearchData;
@@ -12,8 +14,6 @@ import searchengine.model.repository.IndexRepository;
 import searchengine.model.repository.LemmaRepository;
 import searchengine.model.repository.PageRepository;
 import searchengine.model.repository.SiteRepository;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 
 import java.util.*;
 
@@ -140,7 +140,6 @@ public class SearchServiceImpl implements SearchService {
     }
 
 
-
     private String extractTitleFromContent(String htmlContent) {
 
         // Парсим HTML-код с помощью Jsoup
@@ -161,60 +160,71 @@ public class SearchServiceImpl implements SearchService {
 
         return title;
     }
+
     private String extractSnippetFromContent(String htmlContent, String query) {
         if (htmlContent == null || htmlContent.isEmpty() || query == null || query.isEmpty()) {
-            return ""; // Возвращаем пустую строку, если контент или запрос отсутствуют
+            return "";
         }
-
-        // Парсим HTML-код с помощью Jsoup
+        // Парсим HTML-код, убирая теги
         Document document = Jsoup.parse(htmlContent);
-
-        // Извлекаем весь текст из HTML (без тегов)
         String plainText = document.text();
 
-        // Разбиваем запрос на отдельные слова
+        // Разбиваем текст на слова
+        String[] words = plainText.split("\\s+");
+
+        // Разбиваем запрос на слова
         String[] queryWords = query.toLowerCase().split("\\s+");
 
-        // Ищем позиции всех совпадений в тексте
-        List<Integer> matchPositions = new ArrayList<>();
+        // Список сниппетов
+        List<String> snippets = new ArrayList<>();
+
+        // Ищем совпадения
+        Set<Integer> matchIndexes = new TreeSet<>();
         for (String word : queryWords) {
-            int wordPos = plainText.toLowerCase().indexOf(word);
-            while (wordPos != -1) {
-                matchPositions.add(wordPos);
-                wordPos = plainText.toLowerCase().indexOf(word, wordPos + 1);
+            for (int i = 0; i < words.length; i++) {
+                if (words[i].equalsIgnoreCase(word)) {
+                    matchIndexes.add(i);
+                }
             }
         }
 
-        // Если совпадений не найдено, возвращаем начало текста
-        if (matchPositions.isEmpty()) {
-            return plainText.length() > 200
-                    ? plainText.substring(0, 200) + "..."
-                    : plainText;
+        if (matchIndexes.isEmpty()) {
+            return plainText.length() > 200 ? plainText.substring(0, 200) + "..." : plainText;
         }
 
-        // Определяем границы сниппета
-        int snippetStart = Math.max(0, matchPositions.get(0) - 100); // Начинаем сниппет за 100 символов до первого совпадения
-        int snippetEnd = Math.min(plainText.length(), matchPositions.get(matchPositions.size() - 1) + 100); // Заканчиваем сниппет через 100 символов после последнего совпадения
+        // Генерируем до 3 сниппетов
+        int snippetSize = 10; // Количество слов до и после
+        int maxSnippets = 3;
+        int lastEnd = -1;
 
-        // Формируем сниппет
-        String snippet = plainText.substring(snippetStart, snippetEnd);
+        for (int index : matchIndexes) {
+            int start = Math.max(0, index - snippetSize);
+            int end = Math.min(words.length, index + snippetSize);
 
-        // Выделяем все совпадения тегом <b>
-        for (String word : queryWords) {
-            snippet = snippet.replaceAll("(?i)(" + word + ")", "<b>$1</b>");
+            // Пропускаем, если фрагмент пересекается с предыдущим
+            if (start <= lastEnd) {
+                continue;
+            }
+
+            String snippet = String.join(" ", Arrays.copyOfRange(words, start, end));
+
+            // Выделяем ключевые слова
+            for (String word : queryWords) {
+                snippet = snippet.replaceAll("(?i)" + word, "<b>$0</b>");
+            }
+
+            snippets.add(snippet);
+            lastEnd = end;
+
+            if (snippets.size() >= maxSnippets) {
+                break;
+            }
         }
 
-        // Добавляем многоточие, если сниппет обрезан
-        if (snippetStart > 0) {
-            snippet = "..." + snippet;
-        }
-        if (snippetEnd < plainText.length()) {
-            snippet = snippet + "...";
-        }
-
-        return snippet;
+        return "... " + String.join(" ... ", snippets) + " ...";
     }
-    public int getTotalCount(String query, String siteUrl) {
+
+    public int getTotalCountPageWithLemma(String query, String siteUrl) {
         Site site = siteRepository.findByUrl(siteUrl)
                 .orElseThrow(() -> new RuntimeException("Site not found"));
 
@@ -257,9 +267,8 @@ public class SearchServiceImpl implements SearchService {
         return pages.size();
     }
 
-    //todo завернуть в for each  для кажгого siteUrl или вообще убрать сайт и просто считать колличество страниц
-    public int getTotalCount(String query) {
-        int res  = 0;
+    public int getTotalCountPageWithLemma(String query) {
+        int pageCount = 0;
         List<Site> sites = siteRepository.findAll();
         for (Site siteUrl : sites) {
             Site site = siteRepository.findByUrl(siteUrl.getUrl())
@@ -300,11 +309,12 @@ public class SearchServiceImpl implements SearchService {
                         remainingLemmas.size()
                 );
             }
-            res += pages.size();
+            pageCount += pages.size();
 
         }
-        return res;
+        return pageCount;
     }
+
     public List<SearchData> searchAllSites(String query, int offset, int limit) {
         List<SearchData> allResults = new ArrayList<>();
 

@@ -27,10 +27,6 @@ public class PageService {
     @Transactional
     public Page savePage(String url, String content, Integer statusCode, Site site) throws URISyntaxException {
 
-//        URI uri = new URI(url);
-//        String path = uri.getPath();
-//        if (path.isEmpty()) {
-//            path = "/";
 
 
         try {
@@ -50,8 +46,8 @@ public class PageService {
     }
 
     @Transactional(readOnly = true)
-    boolean pageExist(String url) {
-        return pageRepository.findByPath(url).isPresent();
+    boolean pageExist(Long siteId, String url) {
+        return pageRepository.existsBySiteIdAndPath(siteId,url);
     }
 
     @Transactional
@@ -80,6 +76,9 @@ public class PageService {
         pageRepository.delete(page);
     }
 
+    //public boolean pageExist(Long siteId, String path) {
+      //  return pageRepository.existsBySiteIdAndPath(siteId, path);
+    //}
 }
 
 

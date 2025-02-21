@@ -72,9 +72,11 @@ databaseChangeLog:
             constraintName: fk_page_site
         - createIndex:
             tableName: page
-            indexName: idx_page_path
+            indexName: idx_page_site_path
             unique: true
             columns:
+              - column:
+                  name: site_id
               - column:
                   name: path
   - changeSet:
