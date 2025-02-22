@@ -39,7 +39,7 @@ public class ApiController {
     @GetMapping("/startIndexing")
     public ResponseEntity<SuccessfulIndexingResult> startIndex() {
 //        if (!IndexService.isRunning.getAndSet(true)) {
-//            // todo
+//            // todo при запуске проверять  сайт в бд, удалять по нему данные и переиндексировать
 //            indexService.startIndex(sitesList.getSites());
 //            return ResponseEntity.ok(IndexingResult.successfulResult());
 //        }
@@ -55,10 +55,13 @@ public class ApiController {
     @GetMapping("/stopIndexing")
     public ResponseEntity<IndexingResult> stopIndex() {
         try {
-            //todo запрашивать стоп индекс
-            return null;
-        } catch (Exception e) {
+            if (IndexService.isRunning.get()){
+                indexService.stopIndexing();
+            }
+
             return ResponseEntity.ok(IndexingResult.successfulResult());
+        } catch (Exception e) {
+            throw new RuntimeException("индексация не запущена");
         }
 
     }
@@ -75,7 +78,7 @@ public class ApiController {
             throw  new RuntimeException("Указан пустой поисковый запрос");
         }
 
-        if (false){//todo !isIndexingComplete()) {
+        if (IndexService.isRunning.get()){
             throw new RuntimeException(("Индексация еще не завершена"));
         }
 
@@ -84,11 +87,9 @@ public class ApiController {
             int totalCount;
 
             if (site == null || site.trim().isEmpty()) {
-                // Если сайт не указан, ищем по всем сайтам
                 results = searchService.searchAllSites(query, offset, limit);
                 totalCount = searchService.getTotalCountPageWithLemma(query);
             } else {
-                // Ищем по конкретному сайту
                 results = searchService.search(query, site, offset, limit);
                 totalCount = searchService.getTotalCountPageWithLemma(query, site);
             }

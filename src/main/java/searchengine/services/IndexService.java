@@ -2,6 +2,8 @@ package searchengine.services;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import searchengine.config.SiteConfig;
 import searchengine.config.SitesList;
@@ -9,6 +11,8 @@ import searchengine.model.SiteStatus;
 import searchengine.model.entity.Site;
 import searchengine.model.repository.PageRepository;
 import searchengine.model.repository.SiteRepository;
+
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,49 +35,60 @@ public class IndexService {
     private final ForkJoinPool forkJoinPool;
     private final LemmaService lemmaService;
     private final PageService pageService;
+    private final SiteService siteService;
 
 
-    public void startIndex(List<SiteConfig> siteConfigList) {
-        isRunning.set(true);
+        public void startIndex(List<SiteConfig> siteConfigList) {
+            isRunning.set(true);
+            try {
+
+                List<Site> sites = saveSiteFromConfig(siteConfigList);
+
+                for (Site site : sites) {
+                    if (!isSiteAvailable(site.getUrl())) {
+                        siteService.setFailedStatus(site, "Главная страница недоступна");
+                        continue; // Пропускаем индексацию
+                    }
+                }
+                // Создаём список задач
+                List<IndexTask> tasks = sites.stream()
+                        .map(site -> new IndexTask(
+                                site.getUrl(),
+                                lemmaService,
+                                pageService,
+                                siteService,
+                                site
+                        ))
+                        .toList();
+
+                // Запускаем все задачи и ждём их завершения
+                tasks.forEach(forkJoinPool::invoke);
+                System.out.println("Индексация завершена");
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                isRunning.set(false);
+            }
+        }
+    public void stopIndexing() {
+        isRunning.set(false);
+        forkJoinPool.shutdownNow();// Прерываем все задачи в пуле
+        System.out.println("индексация прервана");
+    }
+    private boolean isSiteAvailable(String url) {
         try {
 
-            List<Site> sites = saveSiteFromConfig(siteConfigList);
+            Connection.Response connection = Jsoup.connect(url)
+                    .timeout(5000)  // Таймаут 5 сек
+                    .ignoreHttpErrors(true)
+                    .execute();
 
-            // Создаём список задач
-            List<IndexTask> tasks = sites.stream()
-                    .map(site -> new IndexTask(
-                            site.getUrl(),
-                            lemmaService,
-                            pageService,
-                            site
-                    ))
-                    .toList();
 
-            // Запускаем все задачи и ждём их завершения
-            tasks.forEach(forkJoinPool::invoke);
-            System.out.println("Индексация завершена");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            isRunning.set(false);
+            return connection.statusCode() == 200;
+        } catch (IOException e) {
+            return false;
         }
-    }
-
-
-    public void updateStatus(List<SiteConfig> siteConfigList) {
-        for (SiteConfig siteConfig : siteConfigList) {
-            System.out.println("Удалена информация по сайтам : " + siteConfig.getUrl());
-            //todo
-        }
-
-    }
-
-    public void savePage(String url, Long siteId) {
-        //todo
-        Site site = siteRepository.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Сайт с ID " + siteId + " не найден"));
-
     }
 
     //or string name?
@@ -96,19 +111,18 @@ public class IndexService {
         }
         // Определяем, к какому сайту принадлежит страница
 
-
         // Удаляем старую страницу перед индексацией
        //pageService.deletePageByPath(normalizeUrl);
         pageService.deletePageAndUpdateLemmas(normalizeUrl);
 
         // Создаём задачу для индексации этой страницы
-        IndexTask task = new IndexTask(normalizeUrl, lemmaService, pageService, site.get());
+        IndexTask task = new IndexTask(normalizeUrl, lemmaService, pageService,siteService, site.get());
 
         // Запускаем индексацию в ForkJoinPool
         forkJoinPool.invoke(task);
     }
 
-    //todo норм, что он паблик?
+
     public boolean isUrlInConfig(String url) {
         return sitesList.getSites().stream()
                 .anyMatch(siteConfig -> url.startsWith(siteConfig.getUrl()));
@@ -124,7 +138,7 @@ public class IndexService {
             site.setSiteName(siteConfig.getName());
             site.setSiteStatus(SiteStatus.INDEXING); // Устанавливаем статус INDEXING
             site.setStatusTime(Instant.now()); // Устанавливаем время начала индексации
-            site.setLastError(""); // Если нужно, установите пустое сообщение об ошибке
+            site.setLastError("");
 
             res.add(siteRepository.save(site));
         }

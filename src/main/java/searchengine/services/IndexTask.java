@@ -20,25 +20,27 @@ public class IndexTask extends RecursiveAction {
     private final String url;
     private final LemmaService lemmaService;
     private final PageService pageService;
-
+    private final SiteService siteService;
     private final Site site;
     private static final String EXCLUDE_PATTERN = ".*(\\.(png|jpg|jpeg|gif|bmp|zip|sql|pdf|doc|docx|xls|xlsx|ppt|pptx|exe|tar|gz|rar|7z)|#.*)$";
     private static final int MIN_TIME_DELAY = 500;
     private static final int MAX_TIME_DELAY = 4000;
 
-    public IndexTask(String url, LemmaService lemmaService, PageService pageService, Site site) {
+    public IndexTask(String url, LemmaService lemmaService, PageService pageService, SiteService siteService, Site site) {
         this.url = url;
         this.lemmaService = lemmaService;
         this.pageService = pageService;
+        this.siteService = siteService;
         this.site = site;
     }
-
 
 
     @Override
     protected void compute() {
 
         try {
+            site.incrementTasks();
+
             if (pageService.pageExist(site.getId(), extractPathFromUrl(url))) {
                 return;
             }
@@ -67,7 +69,7 @@ public class IndexTask extends RecursiveAction {
                         .distinct()
 
                         .map(NormalizerUrl::normalizeUrl)
-                        .map(link -> new IndexTask(link, lemmaService, pageService, site))
+                        .map(link -> new IndexTask(link, lemmaService, pageService, siteService, site))
                         .toList();
 
                 System.out.println("Обработано: " + url + " найдено страниц: " + subTasks.size());
@@ -81,6 +83,10 @@ public class IndexTask extends RecursiveAction {
         } catch (Exception e) {
             System.err.println("Ошибка при обработке страницы " + url + ": " + e.getMessage());
             e.printStackTrace();
+            } finally {
+                if (site.decrementTasks()) {
+                    siteService.updateSiteStatus(site);
+                }
         }
     }
 

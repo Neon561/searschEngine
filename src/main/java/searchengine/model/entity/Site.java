@@ -7,6 +7,7 @@ import searchengine.model.SiteStatus;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Entity
 @Table(name = "site")
@@ -37,4 +38,23 @@ public class Site {
 
     @OneToMany(mappedBy = "site", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Page> pages;
+
+    @Transient // Не сохраняем в БД
+    private final AtomicInteger activeTasks = new AtomicInteger(0);
+
+    public void incrementTasks() {
+        activeTasks.incrementAndGet();
+    }
+
+    public boolean decrementTasks() {
+        int remainingTasks = activeTasks.decrementAndGet();
+        if (remainingTasks == 0) {
+            setSiteStatus(SiteStatus.INDEXED);
+            setStatusTime(Instant.now());
+            System.out.println("Сайт " + url + " полностью проиндексирован.");
+            return true;
+        }
+        return false;
+    }
+
 }
