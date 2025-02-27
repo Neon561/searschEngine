@@ -24,6 +24,15 @@ public class SiteService {
         System.out.println("Сайт " + site.getUrl() + " главная страница сайта недоступна " + errorMessage);
     }
 
+    public void interruptedByUser(){
+        siteRepository.indexingInterruptedByUser();
+    }
+
+    public void clearDatabase() {
+        siteRepository.truncateAll();
+
+    }
+
 //    public boolean isIndexingComplete() {
 //        return siteRepository.countByStatus(SiteStatus.INDEXING) == 0;
 //    }

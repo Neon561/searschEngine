@@ -1,6 +1,7 @@
 package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.config.SitesList;
@@ -38,18 +39,12 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<SuccessfulIndexingResult> startIndex() {
-//        if (!IndexService.isRunning.getAndSet(true)) {
-//            // todo при запуске проверять  сайт в бд, удалять по нему данные и переиндексировать
-//            indexService.startIndex(sitesList.getSites());
-//            return ResponseEntity.ok(IndexingResult.successfulResult());
-//        }
-//        return ResponseEntity.ok(IndexingResult.failResult("Индексация уже запущена"));
-        if (!IndexService.isRunning.getAndSet(true)) {
+        try {
             indexService.startIndex(sitesList.getSites());
             return ResponseEntity.ok(new SuccessfulIndexingResult());
-
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new SuccessfulIndexingResult());
         }
-        throw new RuntimeException("Индексация уже запущена");
     }
 
     @GetMapping("/stopIndexing")

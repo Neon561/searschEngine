@@ -27,4 +27,16 @@ public interface SiteRepository extends JpaRepository<Site,Long> {
     @Modifying
     @Query("UPDATE Site s SET s.statusTime = CURRENT_TIMESTAMP WHERE s.id = :siteId")
     void updateStatusTime(Long siteId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Site s SET s.lastError = 'индексация прервана пользователем', s.statusTime = CURRENT_TIMESTAMP")
+    void indexingInterruptedByUser();
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Site")
+    //todo сделать очистку бд
+    void truncateAll();
+
 }
