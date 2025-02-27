@@ -1,13 +1,10 @@
 package searchengine.services;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.SiteConfig;
 import searchengine.config.SitesList;
 import searchengine.model.SiteStatus;
@@ -25,7 +22,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static searchengine.services.NormalizerUrl.normalizeUrl;
 
-//почитать про сингл тон
 @Service
 @Data
 @RequiredArgsConstructor
@@ -56,7 +52,7 @@ public class IndexService {
             for (Site site : sites) {
                 if (!isSiteAvailable(site.getUrl())) {
                     siteService.setFailedStatus(site, "Главная страница недоступна");
-                    continue; // Пропускаем индексацию
+                    continue;
                 }
             }
             // Создаём список задач
@@ -82,7 +78,7 @@ public class IndexService {
     }
     public void stopIndexing() {
         isRunning.set(false);
-        forkJoinPool.shutdownNow();// Прерываем все задачи в пуле
+        forkJoinPool.shutdownNow();
         siteService.interruptedByUser();
         System.out.println("индексация прервана");
     }
@@ -91,7 +87,7 @@ public class IndexService {
         try {
 
             Connection.Response connection = Jsoup.connect(url)
-                    .timeout(5000)  // Таймаут 5 сек
+                    .timeout(5000)
                     .ignoreHttpErrors(true)
                     .execute();
 
@@ -102,7 +98,7 @@ public class IndexService {
         }
     }
 
-    //or string name?
+
     private Long getSiteIdFromUrl(String url) {
 
         Optional<Site> site = siteRepository.findByUrl(url);
@@ -120,13 +116,11 @@ public class IndexService {
         if (site.isEmpty()) {
             throw new RuntimeException("Сайт для URL " + url + " не найден в базе данных.");
         }
-        // Определяем, к какому сайту принадлежит страница
 
-        // Удаляем старую страницу перед индексацией
-        //pageService.deletePageByPath(normalizeUrl);
+
         pageService.deletePageAndUpdateLemmas(normalizeUrl);
 
-        // Создаём задачу для индексации этой страницы
+
         IndexTask task = new IndexTask(normalizeUrl, lemmaService, pageService, siteService, site.get());
 
         // Запускаем индексацию в ForkJoinPool

@@ -15,11 +15,11 @@ public class Index {
 
     @ManyToOne
     @JoinColumn(name = "page_id", nullable = false)
-    private Page page; // Ссылка на сущность Page
+    private Page page;
 
     @ManyToOne
     @JoinColumn(name = "lemma_id", nullable = false)
-    private Lemma lemma; // Ссылка на сущность Lemma
+    private Lemma lemma;
 
     @Column(name = "`rank`", nullable = false)
     private float rank;

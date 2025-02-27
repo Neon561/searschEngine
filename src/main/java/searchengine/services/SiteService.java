@@ -28,12 +28,4 @@ public class SiteService {
         siteRepository.indexingInterruptedByUser();
     }
 
-    public void clearDatabase() {
-        siteRepository.truncateAll();
-
-    }
-
-//    public boolean isIndexingComplete() {
-//        return siteRepository.countByStatus(SiteStatus.INDEXING) == 0;
-//    }
 }

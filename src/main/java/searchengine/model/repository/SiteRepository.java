@@ -33,5 +33,9 @@ public interface SiteRepository extends JpaRepository<Site,Long> {
     @Query("UPDATE Site s SET s.lastError = 'индексация прервана пользователем', s.statusTime = CURRENT_TIMESTAMP")
     void indexingInterruptedByUser();
 
+    @Query("SELECT COUNT(l) FROM Lemma l WHERE l.site.id = :siteId")
+    int countLemmasBySiteId(@Param("siteId") long siteId);
+
+
 
 }

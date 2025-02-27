@@ -62,54 +62,56 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.lucene.morphology</groupId>
-            <artifactId>morph</artifactId>
-            <version>1.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene.analysis</groupId>
-            <artifactId>morphology</artifactId>
-            <version>1.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene.morphology</groupId>
+            <groupId>search-engine</groupId>
             <artifactId>dictionary-reader</artifactId>
             <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/dictionary-reader-1.5.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>org.apache.lucene.morphology</groupId>
-            <artifactId>english</artifactId>
+            <groupId>search-engine</groupId>
+            <artifactId>english-1.5</artifactId>
             <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/english-1.5.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>org.apache.lucene.morphology</groupId>
-            <artifactId>russian</artifactId>
+            <groupId>search-engine</groupId>
+            <artifactId>lucene-analyzers-common-8.11.0</artifactId>
             <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/lucene-analyzers-common-8.11.0.jar</systemPath>
         </dependency>
-
-
-
-
+        <dependency>
+            <groupId>search-engine</groupId>
+            <artifactId>lucene-core-8.11.0</artifactId>
+            <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/lucene-core-8.11.0.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>search-engine</groupId>
+            <artifactId>morph-1.5</artifactId>
+            <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/morph-1.5.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>search-engine</groupId>
+            <artifactId>morphology-1.5</artifactId>
+            <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/morphology-1.5.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>search-engine</groupId>
+            <artifactId>russian-1.5</artifactId>
+            <version>1.5</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/russian-1.5.jar</systemPath>
+        </dependency>
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>skillbox-gitlab</id>
-            <url>https://gitlab.skillbox.ru/api/v4/projects/263574/packages/maven</url>
-        </repository>
-    </repositories>
-
-    <distributionManagement>
-        <repository>
-            <id>skillbox-gitlab</id>
-            <url>https://gitlab.skillbox.ru/api/v4/projects/263574/packages/maven</url>
-        </repository>
-
-        <snapshotRepository>
-            <id>skillbox-gitlab</id>
-            <url>https://gitlab.skillbox.ru/api/v4/projects/263574/packages/maven</url>
-        </snapshotRepository>
-    </distributionManagement>
 
 
 

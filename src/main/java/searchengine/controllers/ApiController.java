@@ -26,10 +26,6 @@ public class ApiController {
     private final StatisticsService statisticsService;
     private final SearchServiceImpl searchService;
 
-//    public ApiController(StatisticsService statisticsService) {
-//        this.statisticsService = statisticsService;
-//    }
-
     @GetMapping("/statistics")
     public ResponseEntity<StatisticsResponse> statistics() {
 
@@ -97,12 +93,10 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<IndexingResult> addOrUpdatePage(@RequestParam String url) {
-        // Проверяем, принадлежит ли страница сайтам в конфигурации
         if (!indexService.isUrlInConfig(url)) {
             return ResponseEntity.ok(IndexingResult.failResult("Данная страница находится за пределами сайтов, указанных в конфигурационном файле"));
         }
 
-        // Запускаем удаление старой страницы и индексацию новой
         indexService.reindexPage(url);
 
         return ResponseEntity.ok(IndexingResult.successfulResult());

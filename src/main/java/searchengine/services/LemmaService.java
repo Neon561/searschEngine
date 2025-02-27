@@ -65,12 +65,12 @@ public class LemmaService {
 
     private String getLemma(String word) {
         try {
-            return russianMorphology.getNormalForms(word).get(0); // Пытаемся проанализировать как русское слово
+            return russianMorphology.getNormalForms(word).get(0);
         } catch (Exception e) {
             try {
-                return englishMorphology.getNormalForms(word).get(0); // Пытаемся проанализировать как английское слово
+                return englishMorphology.getNormalForms(word).get(0);
             } catch (Exception ex) {
-                return word.toLowerCase(); // Если не удалось, возвращаем слово как есть
+                return word.toLowerCase();
             }
         }
 

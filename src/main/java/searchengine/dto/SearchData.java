@@ -8,10 +8,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SearchData {
-    private String site;       // URL сайта
-    private String siteName;  // Название сайта
-    private String uri;       // Путь к странице
-    private String title;     // Заголовок страницы
-    private String snippet;   // Сниппет
-    private float relevance;  // Релевантность
+    private String site;
+    private String siteName;
+    private String uri;
+    private String title;
+    private String snippet;
+    private float relevance;
 }

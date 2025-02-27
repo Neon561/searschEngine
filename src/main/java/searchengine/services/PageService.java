@@ -76,9 +76,6 @@ public class PageService {
         pageRepository.delete(page);
     }
 
-    //public boolean pageExist(Long siteId, String path) {
-      //  return pageRepository.existsBySiteIdAndPath(siteId, path);
-    //}
 }
 
 

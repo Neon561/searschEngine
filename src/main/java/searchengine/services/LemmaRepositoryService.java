@@ -29,13 +29,11 @@ public class LemmaRepositoryService {
         List<Index> indexesToSave = new ArrayList<>();
         Map<String, Lemma> existingLemmas = new HashMap<>();
 
-        // Загружаем существующие леммы
         for (String lemmaText : lemmaCountOnPage.keySet()) {
             lemmaRepository.findByLemmaAndSite(lemmaText, site)
                     .ifPresent(lemma -> existingLemmas.put(lemmaText, lemma));
         }
 
-        // Обрабатываем каждую лемму
         for (Map.Entry<String, Integer> entry : lemmaCountOnPage.entrySet()) {
             String lemmaText = entry.getKey();
             int lemmaCount = entry.getValue();
@@ -49,10 +47,8 @@ public class LemmaRepositoryService {
                 return newLemma;
             });
 
-            // Увеличиваем frequency только один раз для каждой леммы на странице
             lemma.setFrequency(lemma.getFrequency() + 1);
 
-            // Создаём запись в индексе
             Index index = new Index();
             index.setPage(page);
             index.setLemma(lemma);
@@ -64,7 +60,6 @@ public class LemmaRepositoryService {
             }
         }
 
-        // Сохраняем остаток
         batchSave(lemmasToSave, indexesToSave);
     }
 
