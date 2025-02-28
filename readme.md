@@ -65,28 +65,5 @@ GET /api/search?query=тело запроса&offset=0&limit=10&site=огран�
 GET /api/statistics
 ```
 
-Статистика выдается в виде JSON:
-
-```JSON
-{
-    "result": true,
-    "statistics": {
-        "total": {
-            "sites": 4,
-            "pages": 133,
-            "lemmas": 10278,
-            "indexing": false
-        },
-        "detailed": [
-            {
-                "url": "https://sendel.ru",
-                "name": "PlayBack.Ru",
-                "status": "INDEXED",
-                "statusTime": 1688441855518,
-                "error": null,
-                "pages": 75,
-                "lemmas": 2715
-            },
-        ]
-      }
-}
+### Запуск
+В файле конфигурации "application.yaml" указать логин и пароль от аккаунта MySQL и сайты, которые хотите индексировать.
